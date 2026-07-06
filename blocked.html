@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>◢◤ OFF LIMITS — ryBlock</title>
+<style>
+  :root {
+    --pink: #ff2a6d;
+    --cyan: #05d9e8;
+    --violet: #d300c5;
+    --bg: #05010d;
+    --grid: rgba(5, 217, 232, 0.07);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--cyan);
+    font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 42px 42px;
+  }
+  /* CRT scanlines + flicker */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg, rgba(0,0,0,0.28) 0px, rgba(0,0,0,0.28) 1px,
+      transparent 1px, transparent 3px);
+    pointer-events: none;
+    z-index: 10;
+  }
+  body::after {
+    content: "";
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center,
+      transparent 55%, rgba(5,1,13,0.9) 100%);
+    pointer-events: none;
+    z-index: 11;
+    animation: flicker 4s infinite;
+  }
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    92% { opacity: 1; }
+    93% { opacity: 0.72; }
+    94% { opacity: 1; }
+    97% { opacity: 0.85; }
+    98% { opacity: 1; }
+  }
+  .frame {
+    border: 1px solid var(--pink);
+    box-shadow: 0 0 18px rgba(255,42,109,0.45), inset 0 0 24px rgba(255,42,109,0.08);
+    padding: 2.4rem 3rem;
+    max-width: 720px;
+    width: calc(100% - 3rem);
+    text-align: center;
+    position: relative;
+    background: rgba(5,1,13,0.82);
+  }
+  .frame::before {
+    content: "SEC.7 // 東京湾岸グリッド";
+    position: absolute; top: -0.75em; left: 1rem;
+    background: var(--bg);
+    padding: 0 0.6em;
+    color: var(--pink);
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+  }
+  pre.skull {
+    color: var(--violet);
+    text-shadow: 0 0 10px var(--violet);
+    font-size: clamp(7px, 1.6vw, 13px);
+    line-height: 1.15;
+    margin-bottom: 1.4rem;
+    user-select: none;
+  }
+  h1 {
+    font-size: clamp(1.6rem, 5vw, 3rem);
+    letter-spacing: 0.18em;
+    color: var(--pink);
+    text-shadow: 0 0 12px var(--pink);
+    position: relative;
+    animation: glitch 2.6s infinite;
+  }
+  @keyframes glitch {
+    0%, 100% { transform: none; text-shadow: 0 0 12px var(--pink); }
+    41% { transform: none; }
+    42% { transform: translate(-3px, 1px) skewX(-4deg);
+          text-shadow: 3px 0 var(--cyan), -3px 0 var(--violet); }
+    44% { transform: translate(2px, -1px) skewX(3deg);
+          text-shadow: -3px 0 var(--cyan), 3px 0 var(--pink); }
+    46% { transform: none; text-shadow: 0 0 12px var(--pink); }
+    78% { transform: none; }
+    79% { transform: translate(4px, 0);
+          text-shadow: -4px 0 var(--cyan), 4px 0 var(--violet); }
+    81% { transform: none; text-shadow: 0 0 12px var(--pink); }
+  }
+  h2 {
+    margin-top: 0.4rem;
+    font-size: clamp(0.9rem, 2.4vw, 1.3rem);
+    font-weight: normal;
+    letter-spacing: 0.5em;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan);
+  }
+  .divider {
+    margin: 1.4rem auto;
+    width: 70%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  }
+  .target {
+    color: #fff;
+    font-size: 1.05rem;
+    letter-spacing: 0.12em;
+    word-break: break-all;
+  }
+  .target b {
+    color: var(--pink);
+    text-shadow: 0 0 8px var(--pink);
+  }
+  .log {
+    margin-top: 1.4rem;
+    text-align: left;
+    font-size: 0.78rem;
+    line-height: 1.7;
+    color: rgba(5,217,232,0.75);
+    display: inline-block;
+  }
+  .log .p { color: var(--pink); }
+  .cursor::after {
+    content: "█";
+    animation: blink 0.9s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  footer {
+    margin-top: 1.6rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.3em;
+    color: rgba(255,255,255,0.35);
+  }
+</style>
+</head>
+<body>
+  <main class="frame">
+    <pre class="skull">
+      ░░░░░░░█▀▀▀▀▀▀▀▀▀█░░░░░░░
+      ░░░░▄▀▀           ▀▀▄░░░░
+      ░░▄▀   ▄▄▄   ▄▄▄    ▀▄░░
+      ░█    █ ◉ █ █ ◉ █     █░
+      ░█     ▀▀▀ ▄ ▀▀▀      █░
+      ░░▀▄    ▄▄▄▄▄▄▄     ▄▀░░
+      ░░░░▀▄  █ █ █ █   ▄▀░░░░
+      ░░░░░░▀▀▀▀▀▀▀▀▀▀▀▀░░░░░░</pre>
+    <h1>ACCESS DENIED</h1>
+    <h2>アクセス禁止区域</h2>
+    <div class="divider"></div>
+    <p class="target">sector <b id="host">this sector</b> is <b>OFF LIMITS</b></p>
+    <div class="log">
+      <div><span class="p">&gt;</span> trace: request intercepted at 127.0.0.1</div>
+      <div><span class="p">&gt;</span> authority: ryBlock // neo-tokyo grid control</div>
+      <div><span class="p">&gt;</span> directive: go touch grass, netrunner</div>
+      <div class="cursor"><span class="p">&gt;</span> unseal: <span style="color:#fff">ryblock remove &lt;domain&gt;</span> </div>
+    </div>
+    <footer>◢◤ RYBLOCK ▮ 1 9 9 X ▮ WIRED NOT TIRED ◥◣</footer>
+  </main>
+  <script>
+    var h = location.hostname;
+    if (h && h !== "127.0.0.1" && h !== "localhost")
+      document.getElementById("host").textContent = h;
+  </script>
+</body>
+</html>

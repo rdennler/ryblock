@@ -1,0 +1,392 @@
+#!/usr/bin/env fish
+# ryBlock — neo-tokyo firewall for your hosts file
+# blocks sites via /etc/hosts, serves a neon "OFF LIMITS" page on 127.0.0.1
+
+set -g RB_HOSTS /etc/hosts
+set -q RYBLOCK_HOSTS; and set -g RB_HOSTS $RYBLOCK_HOSTS
+
+set -g RB_BEGIN '# >>> ryBlock >>> (managed block — do not edit by hand)'
+set -g RB_END   '# <<< ryBlock <<<'
+set -g RB_DIR   (dirname (realpath (status --current-filename)))
+set -g RB_PIDFILE /var/run/ryblock.pid
+
+# ────────────────────────────── cosmetics ──────────────────────────────
+
+# vibrant neon palette — truecolor, falls back to nearest 256/16 on old terms
+set -g _rb_pink  (set_color -o ff2a6d)   # hot magenta
+set -g _rb_cyan  (set_color -o 05d9e8)   # electric cyan
+set -g _rb_dim   (set_color 6d5a9c)      # dim violet
+set -g _rb_red   (set_color -o ff3860)
+set -g _rb_grn   (set_color -o 39ff14)   # neon green
+set -g _rb_yel   (set_color -o fee440)   # neon amber
+set -g _rb_off   (set_color normal)
+
+# skyline-only shades (back-to-front neon gradient)
+set -g _rb_sky   (set_color b98bff)      # moon / stars
+set -g _rb_far   (set_color 7b4bd8)      # distant towers
+set -g _rb_t1    (set_color -o 2ff3ff)   # rooftops
+set -g _rb_t2    (set_color -o 15c9f5)   # upper floors
+set -g _rb_t3    (set_color -o c74bff)   # mid floors (windows)
+set -g _rb_t4    (set_color -o ff2a6d)   # lower floors (windows)
+
+function _rb_logo
+    # ── RYBLOCK marquee ──
+    echo $_rb_pink'    █▀▄░█░█░█▀▄░█░░░█▀█░█▀▀░█░█'
+    echo $_rb_cyan'    █▀▄░░█░░█▀▄░█░░░█░█░█░░░█▀▄'
+    echo $_rb_pink'    ▀░▀░░▀░░▀▀░░▀▀▀░▀▀▀░▀▀▀░▀░▀'$_rb_off
+    # ── neo-tokyo skyline, SimCity-style silhouette (back → front) ──
+    echo $_rb_sky'      ˙    ✦         ◗            ·      ✦   ˙'$_rb_off
+    echo $_rb_far'   ▂▅▃▆▁▄▂▇▃▅▁▆▂▄▃▅▁▇▂▄▆▁▃▅▂▆▁▄▃▅▂▇▁▄▃▅▂'$_rb_off
+    echo $_rb_t1'      ██       ████        ███       █   '$_rb_off
+    echo $_rb_t2'      ███████  ████  █████████   █████   '$_rb_off
+    echo $_rb_t3'   ▓█▓█▓█▓█▓█▓ ▓█▓█  ▓█▓█▓█▓█▓ ▓█▓█▓█▓█▓█'$_rb_off
+    echo $_rb_t4'   █▓█▓█▓█▓█▓█ █▓█▓█▓█▓█▓█▓█▓█ █▓█▓█▓█▓█▓'$_rb_off
+    echo $_rb_pink'   ═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╩══'$_rb_off
+    echo $_rb_dim'   ─── ネオ東京・ファイアウォール ── v1.0 ───'$_rb_off
+end
+
+# one-line glitch animation, resolves into final text
+function _rb_glitch -a final
+    if not isatty stdout
+        echo "  $final"
+        return
+    end
+    set -l frames \
+        '▓▒░ リンク確立中 ░▒▓' \
+        '█▓▒ 4C 4F 43 4B ▒▓█' \
+        '▒░▓ ジャック・イン ▓░▒' \
+        '░▒█ ////////////// █▒░'
+    for f in $frames
+        printf '\r  %s%s%s\033[K' $_rb_cyan $f $_rb_off
+        sleep 0.07
+    end
+    printf '\r  %s\033[K\n' $final
+end
+
+function _rb_ok;   _rb_glitch "$_rb_grn◢◤$_rb_off $argv"; end
+function _rb_err;  echo "  $_rb_red◢◤ ERROR$_rb_off $argv" >&2; end
+function _rb_warn; echo "  $_rb_yel◢◤$_rb_off $argv"; end
+
+# ────────────────────────────── plumbing ──────────────────────────────
+
+# run with sudo only when hosts file isn't writable (lets tests use a fake file)
+function _rb_sudo
+    if test -w $RB_HOSTS
+        command $argv
+    else
+        command sudo $argv
+    end
+end
+
+# facebook.com <- https://www.facebook.com/path:443 etc.
+function _rb_normalize -a raw
+    set -l d (string lower -- $raw)
+    set d (string replace -r '^[a-z][a-z0-9+.-]*://' '' -- $d)
+    set d (string split -m1 -f1 '/' -- $d)
+    set d (string split -m1 -f1 ':' -- $d)
+    set d (string replace -r '^www\.' '' -- $d)
+    set d (string trim -- $d)
+    if not string match -qr '^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$' -- $d
+        return 1
+    end
+    echo $d
+end
+
+function _rb_blocked_domains
+    test -r $RB_HOSTS; or return
+    awk -v b="$RB_BEGIN" -v e="$RB_END" \
+        '$0==b {f=1; next} $0==e {f=0} f && $1=="127.0.0.1" {print $2}' $RB_HOSTS
+end
+
+function _rb_ensure_markers
+    if not grep -qxF -- $RB_BEGIN $RB_HOSTS
+        printf '\n%s\n%s\n' $RB_BEGIN $RB_END | _rb_sudo tee -a $RB_HOSTS >/dev/null
+    end
+end
+
+# overwrite hosts with tmp content, keep perms/inode
+function _rb_commit -a tmp
+    if _rb_sudo cp $tmp $RB_HOSTS
+        rm -f $tmp
+        return 0
+    end
+    rm -f $tmp
+    return 1
+end
+
+# drop marker pair when block is empty
+function _rb_tidy
+    if test (count (_rb_blocked_domains)) -eq 0
+        set -l tmp (mktemp)
+        awk -v b="$RB_BEGIN" -v e="$RB_END" \
+            '$0==b {f=1; next} $0==e {f=0; next} !f' $RB_HOSTS >$tmp
+        _rb_commit $tmp
+    end
+end
+
+function _rb_flush
+    set -q RYBLOCK_HOSTS; and return 0   # test mode — leave real DNS alone
+    switch (uname)
+        case Darwin
+            command sudo dscacheutil -flushcache 2>/dev/null
+            command sudo killall -HUP mDNSResponder 2>/dev/null
+        case Linux
+            type -q resolvectl; and command sudo resolvectl flush-caches 2>/dev/null
+            type -q systemd-resolve; and command sudo systemd-resolve --flush-caches 2>/dev/null
+    end
+    return 0   # flush is best-effort, never fatal
+end
+
+# ────────────────────────────── commands ──────────────────────────────
+
+function rb_add
+    if test (count $argv) -eq 0
+        _rb_err 'usage: ryblock add <domain> [domain ...]'
+        return 1
+    end
+    set -l changed 0
+    for raw in $argv
+        set -l d (_rb_normalize $raw)
+        if test $status -ne 0
+            _rb_err "'$raw' — not a domain I can parse"
+            continue
+        end
+        if contains -- $d (_rb_blocked_domains)
+            _rb_warn "$d already sealed"
+            continue
+        end
+        _rb_ensure_markers
+        set -l tmp (mktemp)
+        awk -v e="$RB_END" -v d="$d" '
+            $0==e { printf "127.0.0.1\t%s\twww.%s\n", d, d
+                    printf "::1\t%s\twww.%s\n", d, d }
+            { print }' $RB_HOSTS >$tmp
+        if _rb_commit $tmp
+            _rb_ok "$_rb_pink$d$_rb_off + www.$d — $_rb_red"'OFF LIMITS'$_rb_off
+            set changed 1
+        else
+            _rb_err "could not write $RB_HOSTS"
+            return 1
+        end
+    end
+    if test $changed -eq 1
+        _rb_flush
+        _rb_glitch "$_rb_dim"'dns cache purged. 記憶消去 complete.'"$_rb_off"
+    end
+end
+
+function rb_remove
+    if test (count $argv) -eq 0
+        _rb_err 'usage: ryblock remove <domain> [domain ...]'
+        return 1
+    end
+    set -l changed 0
+    for raw in $argv
+        set -l d (_rb_normalize $raw)
+        if test $status -ne 0
+            _rb_err "'$raw' — not a domain I can parse"
+            continue
+        end
+        if not contains -- $d (_rb_blocked_domains)
+            _rb_warn "$d was never sealed"
+            continue
+        end
+        set -l tmp (mktemp)
+        awk -v b="$RB_BEGIN" -v e="$RB_END" -v d="$d" '
+            $0==b {f=1} $0==e {f=0}
+            f && $2==d {next}
+            { print }' $RB_HOSTS >$tmp
+        if _rb_commit $tmp
+            _rb_ok "$_rb_pink$d$_rb_off unsealed — $_rb_grn"'link restored'$_rb_off
+            set changed 1
+        else
+            _rb_err "could not write $RB_HOSTS"
+            return 1
+        end
+    end
+    if test $changed -eq 1
+        _rb_tidy
+        _rb_flush
+        _rb_glitch "$_rb_dim"'dns cache purged. 記憶消去 complete.'"$_rb_off"
+    end
+end
+
+function rb_list
+    set -l domains (_rb_blocked_domains)
+    # machine-readable, for completions/scripts
+    if contains -- --plain $argv
+        for d in $domains
+            echo $d
+        end
+        return 0
+    end
+    _rb_logo
+    echo
+    if test (count $domains) -eq 0
+        echo "  $_rb_dim"'grid clean. no sites sealed.'"$_rb_off"
+        return 0
+    end
+    echo "  $_rb_cyan╔═══ SEALED SECTORS ═══════════════════╗$_rb_off"
+    set -l i 1
+    for d in $domains
+        printf '  %s║%s %s%02d%s  %s%-28s%s %s║%s\n' \
+            $_rb_cyan $_rb_off $_rb_dim $i $_rb_off $_rb_pink $d $_rb_off $_rb_cyan $_rb_off
+        set i (math $i + 1)
+    end
+    echo "  $_rb_cyan╚══════════════════════════════════════╝$_rb_off"
+    echo "  $_rb_dim"(count $domains)' domain(s) + www mirrors, sealed at 127.0.0.1'$_rb_off
+end
+
+function rb_flush_cmd
+    _rb_glitch "$_rb_dim"'flushing resolver cache...'"$_rb_off"
+    _rb_flush
+    _rb_ok 'dns cache purged. 記憶消去 complete.'
+end
+
+function rb_serve
+    set -l action start
+    test (count $argv) -ge 1; and set action $argv[1]
+    switch $action
+        case start
+            if test -f $RB_PIDFILE
+                if command sudo kill -0 (command sudo cat $RB_PIDFILE) 2>/dev/null
+                    _rb_warn 'wall is already up (ports 80/443)'
+                    return 0
+                else
+                    _rb_warn 'clearing stale pidfile'   # server died; reap it
+                    command sudo rm -f $RB_PIDFILE
+                end
+            end
+            if not type -q python3
+                _rb_err 'python3 not found — serve needs it'
+                return 1
+            end
+            # reap orphaned walls from older runs still holding :80/:443
+            # (safe: a healthy tracked wall already returned above)
+            command sudo pkill -f "$RB_DIR/blockd.py" 2>/dev/null
+
+            # https is opt-in via mkcert; degrade to http-only if absent
+            set -l https_args
+            set -l https_note '(http only — install mkcert for https)'
+            if type -q mkcert
+                _rb_glitch "$_rb_dim"'trusting local CA (mkcert)...'"$_rb_off"
+                mkcert -install 2>/dev/null   # runs as YOU: installs into your keychain + browsers
+                command sudo mkdir -p $RB_DIR/certs
+                set https_args --https --cert-dir $RB_DIR/certs \
+                    --caroot (mkcert -CAROOT) --mkcert (command -v mkcert)
+                set https_note 'http + https — neon page even on TLS'
+            else
+                _rb_warn 'mkcert not found — https sites will still error. brew install mkcert'
+            end
+
+            command sudo python3 $RB_DIR/blockd.py $RB_DIR/blocked.html --daemon $https_args
+            # daemon detaches immediately; confirm it actually bound + survived
+            sleep 1
+            if test -f $RB_PIDFILE; and command sudo kill -0 (command sudo cat $RB_PIDFILE) 2>/dev/null
+                _rb_ok "wall is up — sealed sites show the OFF LIMITS page $https_note"
+            else
+                _rb_err 'server failed to start (ports 80/443 busy? another server running?)'
+                return 1
+            end
+        case stop
+            test -f $RB_PIDFILE; and command sudo kill (command sudo cat $RB_PIDFILE) 2>/dev/null
+            command sudo rm -f $RB_PIDFILE
+            # sweep any orphaned walls too, so ports are freed for certain
+            command sudo pkill -f "$RB_DIR/blockd.py" 2>/dev/null
+            _rb_ok 'wall is down'
+        case status
+            if test -f $RB_PIDFILE; and command sudo kill -0 (command sudo cat $RB_PIDFILE) 2>/dev/null
+                echo "  $_rb_grn◢◤$_rb_off wall UP — pid "(command sudo cat $RB_PIDFILE)
+            else
+                echo "  $_rb_dim◢◤ wall DOWN$_rb_off"
+            end
+        case '*'
+            _rb_err "serve: unknown action '$action' (start|stop|status)"
+            return 1
+    end
+end
+
+function _rb_probe -a proto host port name
+    set -l url "$proto://$host:$port/"
+    set -l code (command curl -s -k -o /dev/null -w '%{http_code}' \
+        --connect-timeout 2 --resolve "ryblock.test:$port:$host" $url 2>/dev/null)
+    if test "$code" = 403
+        echo "  $_rb_grn◢◤$_rb_off $name  serving OFF LIMITS ($code)"
+    else if test -n "$code"; and test "$code" != 000
+        echo "  $_rb_yel◢◤$_rb_off $name  responded $code (unexpected)"
+    else
+        echo "  $_rb_red◢◤$_rb_off $name  no listener (connection refused)"
+    end
+end
+
+function rb_doctor
+    _rb_logo
+    echo
+    # 1) wall process
+    if test -f $RB_PIDFILE; and command sudo kill -0 (command sudo cat $RB_PIDFILE) 2>/dev/null
+        echo "  $_rb_grn◢◤$_rb_off wall process UP — pid "(command sudo cat $RB_PIDFILE)
+    else
+        echo "  $_rb_red◢◤$_rb_off wall process DOWN — run: $_rb_cyan"'rb:serve'"$_rb_off"
+    end
+    # 2) listeners on both stacks
+    _rb_probe http  127.0.0.1 80  'ipv4 :80 '
+    _rb_probe http  '[::1]'    80  'ipv6 :80 '
+    _rb_probe https 127.0.0.1 443 'ipv4 :443'
+    _rb_probe https '[::1]'    443 'ipv6 :443'
+    # 3) local CA trusted?
+    if type -q mkcert
+        if test -f (mkcert -CAROOT)/rootCA.pem
+            echo "  $_rb_grn◢◤$_rb_off mkcert local CA present ("(mkcert -CAROOT)")"
+        else
+            echo "  $_rb_yel◢◤$_rb_off mkcert CA not installed — run: $_rb_cyan"'rb:serve'"$_rb_off"
+        end
+    else
+        echo "  $_rb_yel◢◤$_rb_off mkcert missing — https shows cert errors. brew install mkcert"
+    end
+    # 4) sealed count
+    echo "  $_rb_dim◢◤$_rb_off "(count (_rb_blocked_domains))" domain(s) sealed in $RB_HOSTS"
+    echo
+    echo "  $_rb_pink◢◤ if a site STILL loads:$_rb_off"
+    echo "  $_rb_dim   • Secure DNS / DoH bypasses /etc/hosts entirely. Turn it OFF:$_rb_off"
+    echo "  $_rb_dim     Arc/Chrome → Settings → Privacy → 'Use secure DNS' = off.$_rb_off"
+    echo "  $_rb_dim   • HSTS + service-worker cache (youtube) survive: hard-reload,$_rb_off"
+    echo "  $_rb_dim     or clear the site's data. QUIC/HTTP3 may also need a restart.$_rb_off"
+end
+
+function rb_help
+    _rb_logo
+    echo
+    echo "  $_rb_cyan"'rb:add'"$_rb_off"'    <domain>...   seal a site (+ www mirror)'
+    echo "  $_rb_cyan"'rb:remove'"$_rb_off"' <domain>...   unseal a site'
+    echo "  $_rb_cyan"'rb:list'"$_rb_off"'                 show sealed sectors'
+    echo "  $_rb_cyan"'rb:flush'"$_rb_off"'                purge dns cache'
+    echo "  $_rb_cyan"'rb:serve'"$_rb_off"' [stop|status]  OFF LIMITS page server on :80 + :443 (https via mkcert)'
+    echo "  $_rb_cyan"'rb:doctor'"$_rb_off"'                diagnose why a site still loads'
+    echo
+    echo "  $_rb_dim"'domains normalized: https://www.facebook.com/x == facebook.com'"$_rb_off"
+    echo "  $_rb_dim"'(engine also callable as: ryblock <cmd>)'"$_rb_off"
+end
+
+# ────────────────────────────── dispatch ──────────────────────────────
+
+set -l cmd $argv[1]
+switch "$cmd"
+    case add block
+        rb_add $argv[2..]
+    case remove rm unblock
+        rb_remove $argv[2..]
+    case list ls
+        rb_list $argv[2..]
+    case flush
+        rb_flush_cmd
+    case serve
+        rb_serve $argv[2..]
+    case doctor diag
+        rb_doctor
+    case '' help -h --help
+        rb_help
+    case '*'
+        _rb_err "unknown command '$cmd'"
+        rb_help
+        exit 1
+end

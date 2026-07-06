@@ -1,0 +1,20 @@
+# TLS material — private keys, and reveals which sites are blocked.
+# Regenerated on demand by `rb:serve` (mkcert), never commit.
+certs/
+*.pem
+*.key
+*.p12
+
+# Python build artifacts
+__pycache__/
+*.pyc
+
+# Local Claude Code settings (personal permissions / paths)
+.claude/
+
+# macOS cruft
+.DS_Store
+
+# Test hosts fixtures
+hosts.test
+rb_hosts_test
