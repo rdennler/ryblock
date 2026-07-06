@@ -21,6 +21,9 @@ set -g _rb_grn   (set_color -o 39ff14)   # neon green
 set -g _rb_yel   (set_color -o fee440)   # neon amber
 set -g _rb_off   (set_color normal)
 
+# marquee accent — deep cyberpunk teal for the middle RYBLOCK row
+set -g _rb_logo2 (set_color -o 0a6e8c)   # dark neon cyan
+
 # skyline-only shades (back-to-front neon gradient)
 set -g _rb_sky   (set_color b98bff)      # moon / stars
 set -g _rb_far   (set_color 7b4bd8)      # distant towers
@@ -31,17 +34,18 @@ set -g _rb_t4    (set_color -o ff2a6d)   # lower floors (windows)
 
 function _rb_logo
     # ── RYBLOCK marquee ──
-    echo $_rb_pink'    █▀▄░█░█░█▀▄░█░░░█▀█░█▀▀░█░█'
-    echo $_rb_cyan'    █▀▄░░█░░█▀▄░█░░░█░█░█░░░█▀▄'
-    echo $_rb_pink'    ▀░▀░░▀░░▀▀░░▀▀▀░▀▀▀░▀▀▀░▀░▀'$_rb_off
-    # ── neo-tokyo skyline, SimCity-style silhouette (back → front) ──
-    echo $_rb_sky'      ˙    ✦         ◗            ·      ✦   ˙'$_rb_off
-    echo $_rb_far'   ▂▅▃▆▁▄▂▇▃▅▁▆▂▄▃▅▁▇▂▄▆▁▃▅▂▆▁▄▃▅▂▇▁▄▃▅▂'$_rb_off
-    echo $_rb_t1'      ██       ████        ███       █   '$_rb_off
-    echo $_rb_t2'      ███████  ████  █████████   █████   '$_rb_off
-    echo $_rb_t3'   ▓█▓█▓█▓█▓█▓ ▓█▓█  ▓█▓█▓█▓█▓ ▓█▓█▓█▓█▓█'$_rb_off
-    echo $_rb_t4'   █▓█▓█▓█▓█▓█ █▓█▓█▓█▓█▓█▓█▓█ █▓█▓█▓█▓█▓'$_rb_off
-    echo $_rb_pink'   ═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╩═══╩══'$_rb_off
+    echo $_rb_pink'            █▀▄░█░█░█▀▄░█░░░█▀█░█▀▀░█░█'
+    echo $_rb_logo2'            █▀▄░░█░░█▀▄░█░░░█░█░█░░░█▀▄'
+    echo $_rb_pink'            ▀░▀░░▀░░▀▀░░▀▀▀░▀▀▀░▀▀▀░▀░▀'$_rb_off
+    # ── neo-tokyo skyline: SimCity-style thin line-art + starfield ──
+    echo $_rb_sky'        ˙     ✦        ·          ⋆       ✧  '$_rb_off
+    echo $_rb_sky'           ✧      ·       ☾          ✦     ⋆ '$_rb_off
+    echo $_rb_t1'            ╷           ┌┐           ╷'$_rb_off
+    echo $_rb_t1'           ┌─┐          ││         ┌──┐'$_rb_off
+    echo $_rb_t2'           │·│  ┌────┐  ││         │··│  ┌─┐'$_rb_off
+    echo $_rb_t2'     ┌──┐  │·│  │····│  ││  ┌───┐  │··│  │·│'$_rb_off
+    echo $_rb_t3'     │··│  │·│  │····│  ││  │···│  │··│  │·│'$_rb_off
+    echo $_rb_t4'    ─┴──┴──┴─┴──┴────┴──┴┴──┴───┴──┴──┴──┴─┴─'$_rb_off
     echo $_rb_dim'   ─── ネオ東京・ファイアウォール ── v1.0 ───'$_rb_off
 end
 
