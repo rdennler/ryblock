@@ -93,7 +93,12 @@ A few details worth knowing:
 
 ## Adjust the blocked website
 
-HTML is placed locally inside of `blocked.html` so you can simply adjust it however you'd like. It's completely up to you.
+HTML is placed locally inside of `blocked.html` so you can simply adjust it however you'd like. It's completely up to
+you.
+
+#### Default blocked webpage UI:
+
+<img src="./assets/blocked-ui.gif" alt="Blocked UI" />
 
 ## HTTPS and the neon page
 
