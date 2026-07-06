@@ -91,6 +91,10 @@ A few details worth knowing:
 - **The wall.** `rb:serve` daemonizes a small Python server (`blockd.py`) that answers every request on `:80` and `:443`
   with a `403` and the neon page.
 
+## Adjust the blocked website
+
+HTML is placed locally inside of `blocked.html` so you can simply adjust it however you'd like. It's completely up to you.
+
 ## HTTPS and the neon page
 
 Public certificate authorities (Let's Encrypt included) only sign a cert for a domain you can prove you control. You do
