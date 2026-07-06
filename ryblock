@@ -12,41 +12,33 @@ set -g RB_PIDFILE /var/run/ryblock.pid
 
 # ────────────────────────────── cosmetics ──────────────────────────────
 
-# vibrant neon palette — truecolor, falls back to nearest 256/16 on old terms
-set -g _rb_pink  (set_color -o ff2a6d)   # hot magenta
-set -g _rb_cyan  (set_color -o 05d9e8)   # electric cyan
-set -g _rb_dim   (set_color 6d5a9c)      # dim violet
+# 90s OVA palette — mirrors blocked.html (:root vars), truecolor with
+# fallback to nearest 256/16 on old terms
+set -g _rb_pink  (set_color -o ff1f8f)   # hot magenta   (--magenta)
+set -g _rb_cyan  (set_color -o 16e0ff)   # electric cyan (--cyan)
+set -g _rb_dim   (set_color b026ff)      # violet        (--purple)
+set -g _rb_org   (set_color -o ff8a1e)   # sunburst      (--orange)
+set -g _rb_yel   (set_color -o ffd23f)   # cel amber     (--amber)
 set -g _rb_red   (set_color -o ff3860)
-set -g _rb_grn   (set_color -o 39ff14)   # neon green
-set -g _rb_yel   (set_color -o fee440)   # neon amber
+set -g _rb_grn   (set_color -o 39ff14)   # OSD green
 set -g _rb_off   (set_color normal)
 
-# marquee accent — deep cyberpunk teal for the middle RYBLOCK row
-set -g _rb_logo2 (set_color -o 0a6e8c)   # dark neon cyan
-
-# skyline-only shades (back-to-front neon gradient)
-set -g _rb_sky   (set_color b98bff)      # moon / stars
-set -g _rb_far   (set_color 7b4bd8)      # distant towers
-set -g _rb_t1    (set_color -o 2ff3ff)   # rooftops
-set -g _rb_t2    (set_color -o 15c9f5)   # upper floors
-set -g _rb_t3    (set_color -o c74bff)   # mid floors (windows)
-set -g _rb_t4    (set_color -o ff2a6d)   # lower floors (windows)
+# chrome-title gradient — white hot top, sky mid, steel bottom
+set -g _rb_chr1  (set_color -o -i ffffff)
+set -g _rb_chr2  (set_color -o -i 7fe9ff)
+set -g _rb_chr3  (set_color -o -i 16a6ff)
 
 function _rb_logo
-    # ── RYBLOCK marquee ──
-    echo $_rb_pink'            █▀▄░█░█░█▀▄░█░░░█▀█░█▀▀░█░█'
-    echo $_rb_logo2'            █▀▄░░█░░█▀▄░█░░░█░█░█░░░█▀▄'
-    echo $_rb_pink'            ▀░▀░░▀░░▀▀░░▀▀▀░▀▀▀░▀▀▀░▀░▀'$_rb_off
-    # ── neo-tokyo skyline: SimCity-style thin line-art + starfield ──
-    echo $_rb_sky'        ˙     ✦        ·          ⋆       ✧  '$_rb_off
-    echo $_rb_sky'           ✧      ·       ☾          ✦     ⋆ '$_rb_off
-    echo $_rb_t1'            ╷           ┌┐           ╷'$_rb_off
-    echo $_rb_t1'           ┌─┐          ││         ┌──┐'$_rb_off
-    echo $_rb_t2'           │·│  ┌────┐  ││         │··│  ┌─┐'$_rb_off
-    echo $_rb_t2'     ┌──┐  │·│  │····│  ││  ┌───┐  │··│  │·│'$_rb_off
-    echo $_rb_t3'     │··│  │·│  │····│  ││  │···│  │··│  │·│'$_rb_off
-    echo $_rb_t4'    ─┴──┴──┴─┴──┴────┴──┴┴──┴───┴──┴──┴──┴─┴─'$_rb_off
-    echo $_rb_dim'   ─── ネオ東京・ファイアウォール ── v1.0 ───'$_rb_off
+    # ── VHS corner tag ──
+    echo $_rb_yel'                       SEC.7 // 東京湾岸グリッド'$_rb_off
+    # ── chrome marquee + speed-line streaks ──
+    echo '  '$_rb_dim'──'$_rb_chr1'   █▀▄░█░█░█▀▄░█░░░█▀█░█▀▀░█░█'$_rb_off$_rb_dim' ──────'$_rb_off
+    echo '  '$_rb_pink'──='$_rb_chr2'  █▀▄░░█░░█▀▄░█░░░█░█░█░░░█▀▄'$_rb_off$_rb_pink' =────'$_rb_off
+    echo '  '$_rb_dim'──'$_rb_chr3'   ▀░▀░░▀░░▀▀░░▀▀▀░▀▀▀░▀▀▀░▀░▀'$_rb_off$_rb_dim' ─────'$_rb_off
+    # ── converging speed lines ──
+    echo $_rb_org'  ────══════════─────────────══════════───────'$_rb_off
+    echo $_rb_dim'   ══─────────══════════─────────────══════───'$_rb_off
+    echo $_rb_cyan'   ◢◤ RYBLOCK ▮ 1 9 9 X ▮ WIRED NOT TIRED ◥◣'$_rb_off
 end
 
 # one-line glitch animation, resolves into final text
@@ -56,8 +48,8 @@ function _rb_glitch -a final
         return
     end
     set -l frames \
-        '▓▒░ リンク確立中 ░▒▓' \
-        '█▓▒ 4C 4F 43 4B ▒▓█' \
+        '▓▒░ TRACKING… ░▒▓' \
+        '█▓▒ ▶ PLAY ▮ 199X ▒▓█' \
         '▒░▓ ジャック・イン ▓░▒' \
         '░▒█ ////////////// █▒░'
     for f in $frames
@@ -166,7 +158,7 @@ function rb_add
                     printf "::1\t%s\twww.%s\n", d, d }
             { print }' $RB_HOSTS >$tmp
         if _rb_commit $tmp
-            _rb_ok "$_rb_pink$d$_rb_off + www.$d — $_rb_red"'OFF LIMITS'$_rb_off
+            _rb_ok "$_rb_yel$d$_rb_off + www.$d — $_rb_pink"'OFF LIMITS'$_rb_off
             set changed 1
         else
             _rb_err "could not write $RB_HOSTS"
@@ -201,7 +193,7 @@ function rb_remove
             f && $2==d {next}
             { print }' $RB_HOSTS >$tmp
         if _rb_commit $tmp
-            _rb_ok "$_rb_pink$d$_rb_off unsealed — $_rb_grn"'link restored'$_rb_off
+            _rb_ok "$_rb_yel$d$_rb_off unsealed — $_rb_grn"'link restored'$_rb_off
             set changed 1
         else
             _rb_err "could not write $RB_HOSTS"
@@ -230,14 +222,14 @@ function rb_list
         echo "  $_rb_dim"'grid clean. no sites sealed.'"$_rb_off"
         return 0
     end
-    echo "  $_rb_cyan╔═══ SEALED SECTORS ═══════════════════╗$_rb_off"
+    echo "  $_rb_pink◢━━ SEALED SECTORS ━━━━━━━━━━━━━━━━◣$_rb_off"
     set -l i 1
     for d in $domains
-        printf '  %s║%s %s%02d%s  %s%-28s%s %s║%s\n' \
-            $_rb_cyan $_rb_off $_rb_dim $i $_rb_off $_rb_pink $d $_rb_off $_rb_cyan $_rb_off
+        printf '  %s┃%s %s%02d%s  %s%-28s%s %s┃%s\n' \
+            $_rb_pink $_rb_off $_rb_dim $i $_rb_off $_rb_yel $d $_rb_off $_rb_pink $_rb_off
         set i (math $i + 1)
     end
-    echo "  $_rb_cyan╚══════════════════════════════════════╝$_rb_off"
+    echo "  $_rb_pink◥━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━◤$_rb_off"
     echo "  $_rb_dim"(count $domains)' domain(s) + www mirrors, sealed at 127.0.0.1'$_rb_off
 end
 
@@ -369,6 +361,8 @@ function rb_help
     echo
     echo "  $_rb_dim"'domains normalized: https://www.facebook.com/x == facebook.com'"$_rb_off"
     echo "  $_rb_dim"'(engine also callable as: ryblock <cmd>)'"$_rb_off"
+    echo
+    echo "  $_rb_org>$_rb_off $_rb_dim"'directive: go touch grass, netrunner'"$_rb_off"
 end
 
 # ────────────────────────────── dispatch ──────────────────────────────
