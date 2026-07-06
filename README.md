@@ -1,13 +1,5 @@
 # ryBlock ◢◤ ネオ東京・ファイアウォール
 
-```
-█▀▄░█░█░█▀▄░█░░░█▀█░█▀▀░█░█
-█▀▄░░█░░█▀▄░█░░░█░█░█░░░█▀▄
-▀░▀░░▀░░▀▀░░▀▀▀░▀▀▀░▀▀▀░▀░▀
-```
-
-<img src="./assets/ui.jpeg" width="640" height="359"  alt="Ryblock UI"/>
-
 A tiny terminal site blocker with a 90s Japanese cyberpunk theme.
 
 It seals domains in your `/etc/hosts`, flushes the DNS cache for you, and can serve a neon **OFF LIMITS** page so
